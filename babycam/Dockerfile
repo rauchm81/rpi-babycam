@@ -8,7 +8,7 @@ COPY go.sum ./
 RUN go mod download
 
 COPY *.go ./
-COPY ./static ./
+COPY ./static ./static
 
 RUN go build -o /babycam
 
