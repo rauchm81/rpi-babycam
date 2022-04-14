@@ -1,0 +1,193 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title>Maximilian Kinderzimmer</title>
+
+    <style>
+        .left {
+            float: left;
+            text-align: center;
+            width: 1280px;
+        }
+        
+        .button {
+            border-radius: 8px;
+            width: 632px;
+        }
+    </style>
+
+</head>
+<script type="text/javascript">
+    const JANUS_URL = 'http://raspberrypi.local:8088/janus'
+    let janus = nil;
+    let plugin = nil;
+
+    Janus.init({
+        debug: true,
+        dependencies: Janus.useDefaultDependencies(),
+        callback: () => {
+            janus = new Janus({
+                JANUS_URL,
+                /*iceServers: [{
+                    urls: 'stun:coturn.teleop.be.continental.cloud:3478?transport=tcp'
+                }, {
+                    urls: 'turn:coturn.teleop.be.continental.cloud:3478?transport=tcp',
+                    credential: 'coturn',
+                    username: 'coturn'
+                }],*/
+                success: () => {
+                    janus.attach({
+                        plugin: "janus.plugin.streaming",
+                        opaqueId: "myopaqueid",
+                        success: (plugin) => {
+                            plugin = plugin;
+                            //this.updateStreamsList();
+                        },
+                        error: (error) => {
+                            console.log('Error attaching plugin... ', error)
+                        },
+                        onmessage: (msg, jsep) => {
+                            if (msg && msg.result) {
+                                const result = msg.result
+                                if (result.status) {
+                                    console.log("status:", result.status);
+                                }
+                            } else if (msg && msg.error) {
+                                console.log(msg.error)
+                            }
+
+                            if (jsep) {
+                                this.plugin.createAnswer({
+                                    jsep: jsep,
+                                    media: {
+                                        audioSend: false,
+                                        videoSend: false
+                                    },
+                                    success: (jsep) => {
+                                        var body = {
+                                            request: "start"
+                                        };
+                                        plugin.send({
+                                            message: body,
+                                            jsep: jsep
+                                        });
+                                    },
+                                    error: (error) => {
+                                        console.log("WebRTC error:", error);
+                                    }
+                                })
+                            }
+                        },
+                        /*onremotestream: (stream) => {
+                          this.onRemoteStream(stream)
+                        },*/
+                        onremotetrack: (track, mid, on) => {
+                            onRemoteTrack(track, mid, on);
+                        },
+                        oncleanup: () => {
+                            console.log("cleanup event");
+                        }
+                    })
+                },
+                error: (error) => {
+                    console.log('Failed to connect to janus server', error)
+                },
+                destroyed: () => {
+                    window.location.reload()
+                }
+            })
+        }
+    })
+
+    function onRemoteTrack(track, mid, on) {
+
+        let video = document.getElementById("video");
+        if (on) {
+            // New audio track: create a stream out of it
+            let newStream = new MediaStream();
+            newStream.addTrack(track.clone());
+
+            Janus.attachMediaStream(video, newStream);
+        } else {
+            video.stream = null;
+        }
+    }
+
+    plugin.send({
+        message: {
+            request: "watch",
+            id: 1
+        }
+    })
+
+
+
+
+
+
+
+
+
+    /* Copyright (C) 2007 Richard Atterer, richard©atterer.net
+       This program is free software; you can redistribute it and/or modify it
+       under the terms of the GNU General Public License, version 2. See the file
+       COPYING for details. */
+
+    var imageNr = 0; // Serial number of current image
+    var finished = new Array(); // References to img objects which have finished downloading
+    var paused = false;
+
+    function createImageLayer() {
+        var img = new Image();
+        img.style.position = "absolute";
+        img.style.zIndex = -1;
+        img.onload = imageOnload;
+        img.onclick = imageOnclick;
+        img.src = "./?action=snapshot&n=" + (++imageNr);
+        var webcam = document.getElementById("webcam");
+        webcam.insertBefore(img, webcam.firstChild);
+    }
+
+    // Two layers are always present (except at the very beginning), to avoid flicker
+    function imageOnload() {
+        this.style.zIndex = imageNr; // Image finished, bring to front!
+        while (1 < finished.length) {
+            var del = finished.shift(); // Delete old image(s) from document
+            del.parentNode.removeChild(del);
+        }
+        finished.push(this);
+        if (!paused) createImageLayer();
+    }
+
+    function imageOnclick() { // Clicking on the image will pause the stream
+        paused = !paused;
+        if (!paused) createImageLayer();
+    }
+
+    function ledOn() {
+        var xhttp = new XMLHttpRequest();
+        xhttp.open("GET", "http://" + window.location.hostname + ":5000/api/led/on", true);
+        xhttp.send();
+    }
+
+    function ledOff() {
+        var xhttp = new XMLHttpRequest();
+        xhttp.open("GET", "http://" + window.location.hostname + ":5000/api/led/off", true);
+        xhttp.send();
+    }
+</script>
+
+<body onload="createImageLayer();">
+
+    <div class="left">
+        <button type="submit" style="font-size:80px; height:20%; width:637px; color:red;" onclick="ledOff()">Off</button>
+        <button type="submit" style="font-size:80px; height:20%; width:637px; color:green;" onclick="ledOn()">On</button>
+    </div>
+
+    <div id="webcam"><noscript><img src="./?action=snapshot" /></noscript></div>
+
+</body>
+
+</html>

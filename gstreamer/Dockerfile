@@ -1,0 +1,15 @@
+FROM raspbian/stretch
+
+ENV DEBIAN_FRONTEND noninteractive
+
+RUN apt-get update \
+&& apt-get -y upgrade \
+&& apt-get -y install \
+gstreamer1.0-plugins-base \
+gstreamer1.0-plugins-good \
+gstreamer1.0-plugins-ugly \
+gstreamer1.0-tools \
+gstreamer1.0-alsa \
+netcat-openbsd \
+&& apt-get clean \
+&& rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
