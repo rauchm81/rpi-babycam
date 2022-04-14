@@ -19,9 +19,9 @@ services:
       - 5002
     network_mode: host
 
-    babycam:
-      image: babycam
-      container_name: babycam
-      restart: unless-stopped
-      expose:
-      - 80
+  babycam:
+    image: babycam
+    container_name: babycam
+    restart: unless-stopped
+    expose:
+    - 80
